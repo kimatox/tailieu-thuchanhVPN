@@ -1,0 +1,461 @@
+GET VPN (Group Encrypted Transport VPN)
+- GET VPN dua ra khai niem trusted-group, cac thanh vien trong Group (Group Member - GM)
+se chia se chung mot SA (Security Association), cac thanh vien trong group dung chung 1 chinh sach 
+trong thuc hien bao ve du lieu.
+- GET VPN dung them khai niem GDOI (Group Domain of Interpretation). GDOI la giao thuc quan ly khoa
+dung de cung cap thong tin ve chinh sach, khoa ma hoa va giai ma cho cac thanh vien trong nhom.
+- GDOI cung quan ly viec tao moi thong tin khoa theo dinh ky goi la rekey.
+- GDOI nam o pha 1 (ISAKMP). GDOI gioi thieu 2 loai khoa ma hoa:
++ Khoa dung de bao ve du lieu (Traffic Encryption Key - TEK)
++ Khoa dung de bao ve thong diep rekey (Key Encryption Key - KEK)
+- Khi cau hinh GDOI thi can co cac thiet bi sau:
++ KS (Key Server): la thiet bi dong vai tro thong tin tao cac thong tin lien quan den cac chinh sach 
+bao mat: xac dinh du lieu can bao ve, giao thuc ma hoa, thoi gian thuc hien rekey...Cac chinh sach nay
+se dua phan phoi xuong cho cac thiet bi GM.
++ GM (Group Member): la thiet bi nhan cac chinh sach tu KS phan phoi xuong, GM cung chiu trach nhiem 
+thuc hien ma hoa va giai ma du lieu. Tat cac cac GM trong cung 1 nhom se thuc hien trao doi du lieu
+voi nhau mot cach bao mat thong qua cac chinh sach duoc chia se boi KS.
+- Tien trinh Rekey: KS con co trach nhiem thuc hien dinh ky tao khoa moi va phan phoi den GM,
+- Co 2 phuong thuc Rekey:
++ Unicat: moi thong diep Rekey duoc gui den tung GM, khi GM nhan duoc se thuc hien xac nhan voi KS.
+Dieu nay dam bao KS chac chan la GM da nhan duoc thong diep Rekey.
++ Multicast: Day la phuong thuc mac dinh, thong diep Rekey se gui den tat ca GM, dieu nay giup tiet
+kiem tai nguyen cho KS, nhung khong co co che xac nhan tu GM.
+
+Cau hinh GET VPN theo mo hinh, dam bao 2 mang 192.168.1.0/24 va 192.168.2.0/24 khi trao doi du lieu
+se duoc bao ve.
+
+Buoc 1. Dat IP
+
+Buoc 2. Cau hinh KS
+
+- Tao khoa RSA, dung trong viec Rekey:
+
+KS(config)#crypto key generate rsa label ngocdai.com
+The name for the keys will be: ngocdai.com
+Choose the size of the key modulus in the range of 360 to 4096 for your
+  General Purpose Keys. Choosing a key modulus greater than 512 may take
+  a few minutes.
+
+How many bits in the modulus [512]: 1024
+% Generating 1024 bit RSA keys, keys will be non-exportable...
+[OK] (elapsed time was 1 seconds)
+
+R1(config)#
+*Feb 26 05:17:26.199: %SSH-5-ENABLED: SSH 1.99 has been enabled
+
+- Tao chinh sach ISAKMP:
+
+KS(config)#crypto isakmp policy 10
+KS(config-isakmp)#authentication pre-share
+KS(config-isakmp)#encryption des
+KS(config-isakmp)#hash md5
+KS(config-isakmp)#group 2
+
+- Xac dinh khoa:
+
+KS(config)#crypto isakmp key 0 ngocdai address 10.10.10.2
+KS(config)#crypto isakmp key 0 ngocdai address 10.10.10.3
+
+- Tao chinh sach IPsec:
+
+KS(config)#crypto ipsec transform-set MYVPN esp-md5-hmac esp-des
+
+- Tao IPsec profile:
+
+KS(config)#crypto ipsec profile PROFILE
+KS(ipsec-profile)#set transform-set MYVPN
+
+- Cau hinh GDOI:
+
++ cau hinh nhom GDOI:
+ 
+KS(config)#crypto gdoi group GETVPN
+
++ Xac dinh gia tri dinh danh dung de xac dinh cac thanh vien cua cung 1 nhom:
+
+KS(config-gdoi-group)#identity number 123
+KS(config-gdoi-group)#server local
+KS(gdoi-local-server)#
+*Feb 26 05:24:13.467: %CRYPTO-6-GDOI_ON_OFF: GDOI is ON
+
++ Xac dinh phuong thuc rekey:
+
+KS(gdoi-local-server)#rekey transport unicast
+KS(gdoi-local-server)#
+*Feb 26 05:24:25.151: %GDOI-5-KS_REKEY_TRANS_2_UNI: Group GETVPN transitioned to Unicast Rekey.
+
++ Rekey se dung khoa RSA de thuc hien viec xac thuc cho thong diep Rekey:
+
+KS(gdoi-local-server)#rekey authentication mypubkey rsa ngocdai.com
+
++ Xac dinh nguon cua Rekey: chinh la KS
+
+KS(gdoi-local-server)#address ipv4 10.10.10.1
+
++ Cau hinh gan chinh sach vao nhom:
+
+KS(gdoi-local-server)#sa ipsec 1
+KS(gdoi-sa-ipsec)#profile PROFILE
+
++ Xac dinh mang duoc bao ve: 100 la so access list
+
+KS(gdoi-sa-ipsec)#match address ipv4 100
+
++ Access list:
+
+KS(config)#access-list 100 permit ip 192.168.1.0 0.0.0.255 192.168.2.0 0.0.0.255
+KS(config)#access-list 100 permit ip 192.168.2.0 0.0.0.255 192.168.2.0 0.0.0.255
+
+Buoc 3: Cau hinh tren GM1
+
+GM1(config)#crypto isakmp policy 10
+GM1(config-isakmp)#hash md5
+GM1(config-isakmp)#encryption des
+GM1(config-isakmp)#authentication pre-share
+GM1(config-isakmp)#group 2
+GM1(config-isakmp)#exit
+GM1(config)#crypto isakmp key 0 ngocdai address 10.10.10.1
+GM1(config)#crypto gdoi group GETVPN
+GM1(config-gdoi-group)#identity number 123
+GM1(config-gdoi-group)#server address ipv4 10.10.10.1
+GM1(config-gdoi-group)#exit
+GM1(config)#crypto map MYVPN 10 gdoi
+% NOTE: This new crypto map will remain disabled until a valid
+        group has been configured.
+GM1(config-crypto-map)#set group GETVPN
+GM1(config-crypto-map)#exit
+GM1(config)#interface fastEthernet 0/0
+GM1(config-if)#crypto map MYVPN
+GM1(config-if)#
+*Feb 26 05:38:26.567: %CRYPTO-5-GM_REGSTER: Start registration to KS 10.10.10.1 for group GETVPN using address 10.10.10.2
+GM1(config-if)#
+*Feb 26 05:38:26.571: %CRYPTO-6-GDOI_ON_OFF: GDOI is ON
+GM1(config-if)#exit
+
+*Feb 26 05:38:36.767: %GDOI-5-GM_REKEY_TRANS_2_UNI: Group GETVPN transitioned to Unicast Rekey.
+*Feb 26 05:38:36.767: %GDOI-5-SA_KEK_UPDATED: SA KEK was updated
+*Feb 26 05:38:36.771: %GDOI-5-SA_TEK_UPDATED: SA TEK was updated
+*Feb 26 05:38:36.787: %GDOI-5-GM_REGS_COMPL: Registration to KS 10.10.10.1 complete for group GETVPN using address 10.10.10.2
+*Feb 26 05:38:36.795: %GDOI-5-GM_INSTALL_POLICIES_SUCCESS: SUCCESS: Installation of Reg/Rekey policies from KS 10.10.10.1 for group GETVPN & gm identity  10.10.10.2
+
+GM1(config)#router ospf 1
+GM1(config-router)#network 192.168.1.0 0.0.0.255 area 0
+GM1(config-router)#network 10.10.10.0 0.0.0.255 area 0
+
+Buoc 4: Cau hinh tren GM2
+
+GM2(config)#crypto isakmp policy 10
+GM2(config-isakmp)#hash md5
+GM2(config-isakmp)#encryption des
+GM2(config-isakmp)#authentication pre-share
+GM2(config-isakmp)#group 2
+GM2(config-isakmp)#exit
+GM2(config)#crypto isakmp key 0 ngocdai address 10.10.10.1
+GM2(config)#crypto gdoi group GETVPN
+GM2(config-gdoi-group)#identity number 123
+GM2(config-gdoi-group)#server address ipv4 10.10.10.1
+GM2(config-gdoi-group)#exit
+GM2(config)#crypto map MYVPN 10 gdoi
+% NOTE: This new crypto map will remain disabled until a valid
+        group has been configured.
+GM2(config-crypto-map)#set group GETVPN
+GM2(config-crypto-map)#exit
+GM2(config)#interface fastEthernet 0/0
+GM2(config-if)#crypto map MYVPN
+
+GM2(config-if)#
+*Feb 26 05:46:40.947: %CRYPTO-5-GM_REGSTER: Start registration to KS 10.10.10.1 for group GETVPN using address 10.10.10.3
+GM2(config-if)#
+*Feb 26 05:46:40.955: %CRYPTO-6-GDOI_ON_OFF: GDOI is ON
+GM2(config-if)#exit
+GM2(config)#
+*Feb 26 05:46:51.103: %GDOI-5-GM_REKEY_TRANS_2_UNI: Group GETVPN transitioned to Unicast Rekey.
+*Feb 26 05:46:51.103: %GDOI-5-SA_KEK_UPDATED: SA KEK was updated
+*Feb 26 05:46:51.103: %GDOI-5-SA_TEK_UPDATED: SA TEK was updated
+*Feb 26 05:46:51.127: %GDOI-5-GM_REGS_COMPL: Registration to KS 10.10.10.1 complete for group GETVPN using address 10.10.10.3
+*Feb 26 05:46:51.131: %GDOI-5-GM_INSTALL_POLICIES_SUCCESS: SUCCESS: Installation of Reg/Rekey policies from KS 10.10.10.1 for group GETVPN & gm identity  10.10.10.3
+
+
+GM2(config)#router ospf 1
+GM2(config-router)#network 192.168.1.0 0.0.0.255 area 0
+GM2(config-router)#network 10.10.10.0 0.0.0.255 area 0
+
+Buoc 5: Kiem tra cau hinh
+
+- Kiem tra thong tin GDOI: chu y thoi gian rekey
+
+KS#show crypto gdoi
+GROUP INFORMATION
+
+    Group Name               : GETVPN (Unicast)
+    Group Identity           : 123
+    Crypto Path              : ipv4
+    Key Management Path      : ipv4
+    Group Members            : 2
+    IPSec SA Direction       : Both
+    Group Rekey Lifetime     : 86400 secs
+    Group Rekey
+        Remaining Lifetime   : 85756 secs
+    Rekey Retransmit Period  : 10 secs
+    Rekey Retransmit Attempts: 2
+    Group Retransmit
+        Remaining Lifetime   : 0 secs
+
+      IPSec SA Number        : 1
+      IPSec SA Rekey Lifetime: 3600 secs
+      Profile Name           : PROFILE
+      Replay method          : Count Based
+      Replay Window Size     : 64
+      SA Rekey
+         Remaining Lifetime  : 2957 secs
+      ACL Configured         : access-list 100
+
+     Group Server list       : Local
+
+- Thong tin thanh vien nhom:
+
+
+KS#show crypto gdoi ks members
+
+Group Member Information :
+
+Number of rekeys sent for group GETVPN : 0
+
+Group Member ID    : 10.10.10.2  GM Version: 1.0.4
+ Group ID          : 123
+ Group Name        : GETVPN
+ Key Server ID     : 10.10.10.1
+ Rekeys sent       : 0
+ Rekeys retries    : 0
+ Rekey Acks Rcvd   : 0
+ Rekey Acks missed : 0
+
+ Sent seq num : 0       0       0       0
+Rcvd seq num :  0       0       0       0
+
+Group Member ID    : 10.10.10.3  GM Version: 1.0.4
+ Group ID          : 123
+ Group Name        : GETVPN
+ Key Server ID     : 10.10.10.1
+ Rekeys sent       : 0
+ Rekeys retries    : 0
+ Rekey Acks Rcvd   : 0
+ Rekey Acks missed : 0
+
+ Sent seq num : 0       0       0       0
+Rcvd seq num :  0       0       0       0
+
+- Thong tin chinh sach, chinh sach nay se duoc gui xuong GM:
+
+KS#show crypto gdoi ks policy
+Key Server Policy:
+For group GETVPN (handle: 2147483650) server 10.10.10.1 (handle: 2147483650):
+
+  # of teks : 1  Seq num : 0
+  KEK POLICY (transport type : Unicast)
+    spi : 0x394845FB37F1FD38D756471D5AC02D9B
+    management alg     : disabled    encrypt alg       : 3DES
+    crypto iv length   : 8           key size          : 24
+    orig life(sec): 86400       remaining life(sec): 85583
+    sig hash algorithm : enabled     sig key length    : 162
+    sig size           : 128
+    sig key name       : ngocdai.com
+
+  TEK POLICY (encaps : ENCAPS_TUNNEL)
+    spi                : 0xF615BA79
+    access-list        : 100
+    transform          : esp-des esp-md5-hmac
+    alg key size       : 8             sig key size          : 16
+    orig life(sec)     : 3600          remaining life(sec)   : 2784
+    tek life(sec)      : 3600          elapsed time(sec)     : 816
+    override life (sec): 0             antireplay window size: 64
+
+- Trang thai ISAKMP SA:
+
+KS#show crypto isakmp sa
+IPv4 Crypto ISAKMP SA
+dst             src             state          conn-id status
+10.10.10.1      10.10.10.3      GDOI_IDLE         1002 ACTIVE
+10.10.10.1      10.10.10.2      GDOI_IDLE         1001 ACTIVE
+
+IPv6 Crypto ISAKMP SA
+
+GM1#show crypto isakmp SA
+IPv4 Crypto ISAKMP SA
+dst             src             state          conn-id status
+10.10.10.1      10.10.10.2      GDOI_IDLE         1001 ACTIVE
+10.10.10.2      10.10.10.1      GDOI_REKEY        1002 ACTIVE
+
+IPv6 Crypto ISAKMP SA
+
+GM2#show crypto isakmp SA
+IPv4 Crypto ISAKMP SA
+dst             src             state          conn-id status
+10.10.10.3      10.10.10.1      GDOI_REKEY        1002 ACTIVE
+10.10.10.1      10.10.10.3      GDOI_IDLE         1001 ACTIVE
+
+IPv6 Crypto ISAKMP SA
+
+- Thong tin GDOI:
+
+
+GM1#show crypto gdoi
+GROUP INFORMATION
+
+    Group Name               : GETVPN
+    Group Identity           : 123
+    Crypto Path              : ipv4
+    Key Management Path      : ipv4
+    Rekeys received          : 0
+    IPSec SA Direction       : Both
+
+     Group Server list       : 10.10.10.1
+
+    Group member             : 10.10.10.2       vrf: None
+       Version               : 1.0.4
+       Registration status   : Registered
+       Registered with       : 10.10.10.1
+       Re-registers in       : 2544 sec
+       Succeeded registration: 1
+       Attempted registration: 1
+       Last rekey from       : 0.0.0.0
+       Last rekey seq num    : 0
+       Unicast rekey received: 0
+       Rekey ACKs sent       : 0
+       Rekey Received        : never
+       allowable rekey cipher: any
+       allowable rekey hash  : any
+       allowable transformtag: any ESP
+
+    Rekeys cumulative
+       Total received        : 0
+       After latest register : 0
+       Rekey Acks sents      : 0
+
+ ACL Downloaded From KS 10.10.10.1:
+   access-list   permit ip 192.168.2.0 0.0.0.255 192.168.1.0 0.0.0.255
+
+KEK POLICY:
+    Rekey Transport Type     : Unicast
+    Lifetime (secs)          : 85454
+    Encrypt Algorithm        : 3DES
+    Key Size                 : 192
+    Sig Hash Algorithm       : HMAC_AUTH_SHA
+    Sig Key Length (bits)    : 1024
+
+TEK POLICY for the current KS-Policy ACEs Downloaded:
+  FastEthernet0/0:
+    IPsec SA:
+        spi: 0xF615BA79(4128619129)
+        transform: esp-des esp-md5-hmac
+        sa timing:remaining key lifetime (sec): (2655)
+        Anti-Replay : Disabled
+
+- Ping thanh cong giua 2 may tinh XP
+
+- Du lieu da duoc ma hoa thanh cong:
++ Dung wireshark de test:
++ Dung lenh de test:
+
+
+GM1#show crypto ipsec sa
+
+interface: FastEthernet0/0
+    Crypto map tag: MYVPN, local addr 10.10.10.2
+
+   protected vrf: (none)
+   local  ident (addr/mask/prot/port): (192.168.1.0/255.255.255.0/0/0)
+   remote ident (addr/mask/prot/port): (192.168.2.0/255.255.255.0/0/0)
+   current_peer 0.0.0.0 port 848
+     PERMIT, flags={}
+    #pkts encaps: 16, #pkts encrypt: 16, #pkts digest: 16
+    #pkts decaps: 0, #pkts decrypt: 0, #pkts verify: 0
+    #pkts compressed: 0, #pkts decompressed: 0
+    #pkts not compressed: 0, #pkts compr. failed: 0
+    #pkts not decompressed: 0, #pkts decompress failed: 0
+    #send errors 0, #recv errors 0
+
+     local crypto endpt.: 10.10.10.2, remote crypto endpt.: 0.0.0.0
+     path mtu 1500, ip mtu 1500, ip mtu idb FastEthernet0/0
+     current outbound spi: 0xDE610195(3730899349)
+     PFS (Y/N): N, DH group: none
+
+     inbound esp sas:
+      spi: 0xDE610195(3730899349)
+        transform: esp-des esp-md5-hmac ,
+        in use settings ={Tunnel, }
+        conn id: 3, flow_id: 3, sibling_flags 80000040, crypto map: MYVPN
+        sa timing: remaining key lifetime (sec): (3432)
+        Kilobyte Volume Rekey has been disabled
+        IV size: 8 bytes
+        replay detection support: N
+        Status: ACTIVE(ACTIVE)
+
+     inbound ah sas:
+
+     inbound pcp sas:
+
+     outbound esp sas:
+      spi: 0xDE610195(3730899349)
+        transform: esp-des esp-md5-hmac ,
+        in use settings ={Tunnel, }
+        conn id: 4, flow_id: 4, sibling_flags 80000040, crypto map: MYVPN
+        sa timing: remaining key lifetime (sec): (3432)
+        Kilobyte Volume Rekey has been disabled
+        IV size: 8 bytes
+        replay detection support: N
+        Status: ACTIVE(ACTIVE)
+
+     outbound ah sas:
+
+     outbound pcp sas:
+
+   protected vrf: (none)
+   local  ident (addr/mask/prot/port): (192.168.2.0/255.255.255.0/0/0)
+   remote ident (addr/mask/prot/port): (192.168.1.0/255.255.255.0/0/0)
+   current_peer 0.0.0.0 port 848
+     PERMIT, flags={}
+    #pkts encaps: 0, #pkts encrypt: 0, #pkts digest: 0
+    #pkts decaps: 16, #pkts decrypt: 16, #pkts verify: 16
+    #pkts compressed: 0, #pkts decompressed: 0
+    #pkts not compressed: 0, #pkts compr. failed: 0
+    #pkts not decompressed: 0, #pkts decompress failed: 0
+    #send errors 0, #recv errors 0
+
+     local crypto endpt.: 10.10.10.2, remote crypto endpt.: 0.0.0.0
+     path mtu 1500, ip mtu 1500, ip mtu idb FastEthernet0/0
+     current outbound spi: 0xDE610195(3730899349)
+     PFS (Y/N): N, DH group: none
+
+     inbound esp sas:
+      spi: 0xDE610195(3730899349)
+        transform: esp-des esp-md5-hmac ,
+        in use settings ={Tunnel, }
+        conn id: 1, flow_id: 1, sibling_flags 80000040, crypto map: MYVPN
+        sa timing: remaining key lifetime (sec): (3432)
+        Kilobyte Volume Rekey has been disabled
+        IV size: 8 bytes
+        replay detection support: N
+        Status: ACTIVE(ACTIVE)
+
+     inbound ah sas:
+
+     inbound pcp sas:
+
+     outbound esp sas:
+      spi: 0xDE610195(3730899349)
+        transform: esp-des esp-md5-hmac ,
+        in use settings ={Tunnel, }
+        conn id: 2, flow_id: 2, sibling_flags 80000040, crypto map: MYVPN
+        sa timing: remaining key lifetime (sec): (3432)
+        Kilobyte Volume Rekey has been disabled
+        IV size: 8 bytes
+        replay detection support: N
+        Status: ACTIVE(ACTIVE)
+
+     outbound ah sas:
+
+     outbound pcp sas:
+
+

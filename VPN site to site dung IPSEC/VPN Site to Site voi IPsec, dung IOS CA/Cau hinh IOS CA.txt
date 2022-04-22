@@ -1,0 +1,552 @@
+Buoc 1: Dat IP
+
+SAIGON(config)#interface fastEthernet 0/0
+SAIGON(config-if)#ip address 192.168.13.1 255.255.255.0
+SAIGON(config-if)#no shutdown
+SAIGON(config-if)#exit
+
+SAIGON(config)#interface loopback 1
+SAIGON(config-if)#ip address 192.168.1.1 255.255.255.0
+
+ISP-R3(config)#interface fastEthernet 0/0
+ISP-R3(config-if)#ip address 192.168.13.3 255.255.255.0
+ISP-R3(config-if)#no shutdown
+ISP-R3(config-if)#exit
+
+ISP-R3(config)#interface fastEthernet 1/0
+ISP-R3(config-if)#ip address 192.168.23.3 255.255.255.0
+ISP-R3(config-if)#no shutdown
+
+HANOI(config)#interface fastEthernet 0/0
+HANOI(config-if)#ip address 192.168.23.2 255.255.255.0
+HANOI(config-if)#no shutdown
+HANOI(config-if)#exit
+
+HANOI(config)#interface loopback 2
+HANOI(config-if)#ip address 192.168.2.1 255.255.255.0
+
+Buoc 2: Cau hinh VPN tren SAIGON
+
+Buoc 2.1 Cau hinh chinh sach IKE (chinh sach pha 1)
+
+SAIGON(config)#crypto isakmp policy 10
+SAIGON(config-isakmp)#hash md5
+SAIGON(config-isakmp)#encryption des
+SAIGON(config-isakmp)#group 2
+
+Buoc 2.2 Cau hinh chinh sach IPSec
+
+SAIGON(config)#crypto ipsec transform-set VPN esp-md5-hmac esp-des
+
+Buoc 2.3 Xac dinh luong du lieu duoc ma hoa (luong du lieu duoc bao ve)
+
+SAIGON(config)#access-list 100 permit ip 192.168.1.0 0.0.0.255 192.168.2.0 0.0.0.255
+
+Buoc 2.4 Cau hinh Crypto map
+
+SAIGON(config)#crypto map VPN 10 ipsec-isakmp
+SAIGON(config-crypto-map)#set peer 192.168.23.2
+SAIGON(config-crypto-map)#set transform-set VPN
+SAIGON(config-crypto-map)#match address 100
+
+Buoc 2.5 Cau hinh Crypto map len cong
+
+SAIGON(config)#interface fastEthernet 0/0
+SAIGON(config-if)#crypto map VPN
+
+Buoc 2.6 Cau hinh default ve nha cung cap dich vu
+
+SAIGON(config)#ip route 0.0.0.0 0.0.0.0 192.168.13.3
+
+Buoc 3: Cau hinh VPN tren HANOI
+
+Buoc 2.1 Cau hinh chinh sach IKE (chinh sach pha 1)
+
+HANOI(config)#crypto isakmp policy 10
+HANOI(config-isakmp)#hash md5
+HANOI(config-isakmp)#encryption des
+HANOI(config-isakmp)#group 2
+
+Buoc 2.2 Cau hinh chinh sach IPSec
+
+HANOI(config)#crypto ipsec transform-set VPN esp-md5-hmac esp-des
+
+Buoc 2.3 Xac dinh luong du lieu duoc ma hoa (luong du lieu duoc bao ve)
+
+HANOI(config)#access-list 100 permit ip 192.168.2.0 0.0.0.255 192.168.1.0 0.0.0.255
+
+Buoc 2.4 Cau hinh Crypto map
+
+HANOI(config)#crypto map VPN 10 ipsec-isakmp
+HANOI(config-crypto-map)#set peer 192.168.13.1
+HANOI(config-crypto-map)#set transform-set VPN
+HANOI(config-crypto-map)#match address 100
+
+Buoc 2.5 Cau hinh Crypto map len cong
+
+HANOI(config)#interface fastEthernet 0/0
+HANOI(config-if)#crypto map VPN
+
+Buoc 2.6 Cau hinh default ve nha cung cap dich vu
+
+HANOI(config)#ip route 0.0.0.0 0.0.0.0 192.168.23.3
+
+
+KIEM TRA: LUC NAY TREN SAIGON THUC HIEN ping 192.168.2.1 source 192.168.1.1 SE KHONG THANH CONG
+VI CHUA CAU HINH CHUNG THUC
+
+TU BUOC 3 SE CAU HINH CHUNG THUC BANG IOS CA TREN ROUTER CISCO
+
+Buoc 3: Cau hinh NTP dam bao dong bo thoi gian giua SAIGON, HANOI, ISP-R3
+
+ISP-R3(config)#ntp master
+SAIGON(config)#ntp server 192.168.13.3
+HANOI(config)#ntp server 192.168.23.3
+
+Cac lenh kiem tra thoi gian da duoc dong bo
+
+ISP-R3#show clock
+21:03:04.839 UTC Fri Feb 24 2017
+
+SAIGON#show clock
+21:03:12.321 UTC Fri Feb 24 2017
+
+HANOI#show clock
+21:03:23.224 UTC Fri Feb 24 2017
+
+SAIGON#show ntp status
+Clock is synchronized, stratum 9, reference is 192.168.13.3
+nominal freq is 250.0000 Hz, actual freq is 250.0000 Hz, precision is 2**18
+ntp uptime is 14200 (1/100 of seconds), resolution is 4000
+reference time is DC5B1DA6.BE78BAA9 (21:01:26.744 UTC Fri Feb 24 2017)
+clock offset is -76.1153 msec, root delay is 83.94 msec
+root dispersion is 5953.36 msec, peer dispersion is 1.45 msec
+loopfilter state is 'CTRL' (Normal Controlled Loop), drift is 0.000000000 s/s
+system poll interval is 64, last update was 140 sec ago.
+
+HANOI#show ntp status
+Clock is synchronized, stratum 9, reference is 192.168.23.3
+nominal freq is 250.0000 Hz, actual freq is 250.0000 Hz, precision is 2**18
+ntp uptime is 13500 (1/100 of seconds), resolution is 4000
+reference time is DC5B1DBF.148399CF (21:01:51.080 UTC Fri Feb 24 2017)
+clock offset is -76.1667 msec, root delay is 96.05 msec
+root dispersion is 4953.48 msec, peer dispersion is 1.77 msec
+loopfilter state is 'CTRL' (Normal Controlled Loop), drift is 0.000000000 s/s
+system poll interval is 64, last update was 132 sec ago.
+
+ISP-R3#show ntp status
+Clock is synchronized, stratum 8, reference is 127.127.1.1
+nominal freq is 250.0000 Hz, actual freq is 250.0000 Hz, precision is 2**18
+ntp uptime is 20500 (1/100 of seconds), resolution is 4000
+reference time is DC5B1E44.48B581EF (21:04:04.284 UTC Fri Feb 24 2017)
+clock offset is 0.0000 msec, root delay is 0.00 msec
+root dispersion is 0.43 msec, peer dispersion is 0.23 msec
+loopfilter state is 'CTRL' (Normal Controlled Loop), drift is 0.000000000 s/s
+system poll interval is 16, last update was 13 sec ago.
+
+Buoc 4: Cau hinh cap khoa RSA tren SAIGON, HANOI va IPS-R3
+
+SAIGON(config)#ip domain-name abc.com
+SAIGON(config)#crypto key generate rsa
+The name for the keys will be: SAIGON.abc.com
+Choose the size of the key modulus in the range of 360 to 4096 for your
+  General Purpose Keys. Choosing a key modulus greater than 512 may take
+  a few minutes.
+
+How many bits in the modulus [512]: 1024
+% Generating 1024 bit RSA keys, keys will be non-exportable...
+[OK] (elapsed time was 1 seconds)
+
+HANOI(config)#ip domain-name abc.com
+HANOI(config)#crypto key generate rsa
+The name for the keys will be: HANOI.abc.com
+Choose the size of the key modulus in the range of 360 to 4096 for your
+  General Purpose Keys. Choosing a key modulus greater than 512 may take
+  a few minutes.
+
+How many bits in the modulus [512]: 1024
+% Generating 1024 bit RSA keys, keys will be non-exportable...
+[OK] (elapsed time was 1 seconds)
+
+ISP-R3(config)#ip domain-name abc.com
+ISP-R3(config)#crypto key generate rsa
+The name for the keys will be: ISP-R3.abc.com
+Choose the size of the key modulus in the range of 360 to 4096 for your
+  General Purpose Keys. Choosing a key modulus greater than 512 may take
+  a few minutes.
+
+How many bits in the modulus [512]: 1024
+% Generating 1024 bit RSA keys, keys will be non-exportable...
+[OK] (elapsed time was 1 seconds)
+
+Buoc 5: Cau hinh IOS CA tren IPS-R3
+
+Buoc 5.1 Bat dich vu http
+
+ISP-R3(config)#ip http server
+
+Buoc 5.2 Cau hinh IOS CA
+
+ISP-R3(config)#crypto pki server IOSCA
+
+Buoc 5.3 Xac dinh issuser-name trong chung chi
+
+ISP-R3(cs-server)#issuer-name cn=IOS_CA,ou=Security,o=ngocdai
+
+Buoc 5.4 Tu dong chap nhan yeu cau xin chung chi va cap chung chi
+ISP-R3(cs-server)#grant auto
+Feb 24 21:12:47.835: %PKI-6-CS_GRANT_AUTO: All enrollment requests will be automatically granted.
+
+Buoc 5.5 Kich hoat dich vu
+
+ISP-R3(cs-server)#no shutdown
+%Some server settings cannot be changed after CA certificate generation.
+% Please enter a passphrase to protect the private key
+% or type Return to exit
+Password:
+
+Re-enter password:
+% Generating 1024 bit RSA keys, keys will be non-exportable...
+[OK] (elapsed time was 1 seconds)
+% Exporting Certificate Server signing certificate and keys...
+
+% Certificate Server enabled.
+ISP-R3(cs-server)#
+Feb 24 21:13:19.199: %PKI-6-CS_ENABLED: Certificate server now enabled.
+
+Buoc 6: Cau hinh SAIGON, HANOI xac dinh CA, xac thuc CA va yeu cau chung chi tu CA
+
+Buoc 6.1 Xac dinh CA
+
+SAIGON(config)#crypto ca trustpoint CA
+
+Buoc 6.2 Xac dinh thong tin dinh danh cua subject-name trong chung chi
+
+SAIGON(ca-trustpoint)#subject-name cn=SAIGON,ou=Security,o=ngocdai
+
+Buoc 6.3 Xac thuc phuong thuc yeu cau chung chi
+
+SAIGON(ca-trustpoint)#enrollment url http://192.168.13.3
+
+Buoc 6.4 Khong yeu cau kiem tra danh sach chung chi khi bi huy bo tren CA
+
+SAIGON(ca-trustpoint)#revocation-check none
+
+Buoc 6.5 Thuc hien xac thuc voi CA
+
+SAIGON(config)#crypto ca authenticate CA
+Certificate has the following attributes:
+       Fingerprint MD5: C5CE6AC3 C9B9E0FD 7BB4C3CC B992BD49
+      Fingerprint SHA1: 3FDDD679 A349C1F7 13DD09D8 F7F462D8 5AC9531C
+
+% Do you accept this certificate? [yes/no]: yes
+Trustpoint CA certificate accepted.
+
+Buoc 6.6 Yeu cau chung chi, luc nay se duoc yeu cau 1 mat khau, mat khau nay duoc dung trong
+truong hop khi muon huy bo chung chi hien tai, dung de xac nhan voi CA
+
+SAIGON(config)#crypto ca enroll CA
+%
+% Start certificate enrollment ..
+% Create a challenge password. You will need to verbally provide this
+   password to the CA Administrator in order to revoke your certificate.
+   For security reasons your password will not be saved in the configuration.
+   Please make a note of it.
+
+Password:
+Re-enter password:
+
+% The subject name in the certificate will include: cn=SAIGON,ou=Security,o=ngocdai
+% The subject name in the certificate will include: SAIGON.abc.com
+% Include the router serial number in the subject name? [yes/no]: no
+% Include an IP address in the subject name? [no]: no
+Request certificate from CA? [yes/no]: yes
+% Certificate request sent to Certificate Authority
+% The 'show crypto ca certificate CA verbose' commandwill show the fingerprint.
+
+SAIGON(config)#
+Mar  1 00:16:56.863: CRYPTO_PKI:  Certificate Request Fingerprint MD5: 15BAE0EA ED67B3E5 39B1140A B31997FC
+Mar  1 00:16:56.867: CRYPTO_PKI:  Certificate Request Fingerprint SHA1: C9EC29C3 1CEEE698 47DBEC75 7EEC7417 0406D709
+SAIGON(config)#
+Mar  1 00:16:58.367: %PKI-6-CERTRET: Certificate received from Certificate Authority
+(Dong nay co nghia la chung chi da duoc nhan thanh cong).
+
+SAIGON#show crypto ca certificates
+Certificate
+  Status: Available
+  Certificate Serial Number: 02
+  Certificate Usage: General Purpose
+  Issuer:
+    cn=IOS_CA
+    ou=Security
+    o=ngocdai
+  Subject:
+    Name: SAIGON.abc.com
+    hostname=SAIGON.abc.com
+    cn=SAIGON
+    ou=Security
+    o=ngocdai
+  Validity Date:
+    start date: 00:16:58 UTC Mar 1 2002
+    end   date: 00:16:58 UTC Mar 1 2003
+  Associated Trustpoints: CA
+
+CA Certificate
+  Status: Available
+  Certificate Serial Number: 01
+  Certificate Usage: Signature
+  Issuer:
+    cn=IOS_CA
+    ou=Security
+    o=ngocdai
+  Subject:
+    cn=IOS_CA
+    ou=Security
+    o=ngocdai
+  Validity Date:
+    start date: 00:08:22 UTC Mar 1 2002
+    end   date: 00:08:22 UTC Feb 28 2005
+  Associated Trustpoints: CA
+
+Cau hinh tuong tu cho HANOI
+
+HANOI(config)#crypto ca trustpoint CA
+HANOI(ca-trustpoint)#subject-name cn=HANOI,ou=Security,o=ngocdai
+HANOI(ca-trustpoint)#enrollment url http://192.168.23.3
+HANOI(ca-trustpoint)#revocation-check none
+HANOI(ca-trustpoint)#exit
+
+HANOI(config)#crypto ca authenticate CA
+Certificate has the following attributes:
+       Fingerprint MD5: C5CE6AC3 C9B9E0FD 7BB4C3CC B992BD49
+      Fingerprint SHA1: 3FDDD679 A349C1F7 13DD09D8 F7F462D8 5AC9531C
+
+% Do you accept this certificate? [yes/no]: yes
+Trustpoint CA certificate accepted.
+
+HANOI(config)#crypto ca enroll CA
+%
+% Start certificate enrollment ..
+% Create a challenge password. You will need to verbally provide this
+   password to the CA Administrator in order to revoke your certificate.
+   For security reasons your password will not be saved in the configuration.
+   Please make a note of it.
+
+Password:
+Re-enter password:
+
+% The subject name in the certificate will include: cn=HANOI,ou=Security,o=ngocdai
+% The subject name in the certificate will include: HANOI.abc.com
+% Include the router serial number in the subject name? [yes/no]: no
+% Include an IP address in the subject name? [no]: no
+Request certificate from CA? [yes/no]: yes
+% Certificate request sent to Certificate Authority
+% The 'show crypto ca certificate CA verbose' commandwill show the fingerprint.
+
+HANOI(config)#
+Mar  1 00:21:17.125: CRYPTO_PKI:  Certificate Request Fingerprint MD5: 57C847B6 A38AFA84 2235B1C2 511BE324
+Mar  1 00:21:17.129: CRYPTO_PKI:  Certificate Request Fingerprint SHA1: F9C108E0 2C8C41C7 CF3421CE 093584A9 16178596
+HANOI(config)#
+Mar  1 00:21:18.633: %PKI-6-CERTRET: Certificate received from Certificate Authority
+
+
+HANOI#show crypto ca certificates
+Certificate
+  Status: Available
+  Certificate Serial Number: 03
+  Certificate Usage: General Purpose
+  Issuer:
+    cn=IOS_CA
+    ou=Security
+    o=ngocdai
+  Subject:
+    Name: HANOI.abc.com
+    hostname=HANOI.abc.com
+    cn=HANOI
+    ou=Security
+    o=ngocdai
+  Validity Date:
+    start date: 00:21:18 UTC Mar 1 2002
+    end   date: 00:21:18 UTC Mar 1 2003
+  Associated Trustpoints: CA
+
+CA Certificate
+  Status: Available
+  Certificate Serial Number: 01
+  Certificate Usage: Signature
+  Issuer:
+    cn=IOS_CA
+    ou=Security
+    o=ngocdai
+  Subject:
+    cn=IOS_CA
+    ou=Security
+    o=ngocdai
+  Validity Date:
+    start date: 00:08:22 UTC Mar 1 2002
+    end   date: 00:08:22 UTC Feb 28 2005
+  Associated Trustpoints: CA
+
+KIEM TRA: LUC NAY TU SAIGON THUC HIEN LENH ping 192.168.2.1 source 192.168.1.1 THANH CONG
+
+
+SAIGON#ping 192.168.2.1 source 192.168.1.1
+
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 192.168.2.1, timeout is 2 seconds:
+Packet sent with a source address of 192.168.1.1
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 40/44/52 ms
+
+HANOI#ping 192.168.1.1 source 192.168.2.1
+
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 192.168.1.1, timeout is 2 seconds:
+Packet sent with a source address of 192.168.2.1
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 20/43/60 ms
+
+SAIGON#show crypto isakmp sa
+dst             src             state          conn-id slot status
+192.168.23.2    192.168.13.1    QM_IDLE              1    0 ACTIVE
+
+HANOI#show crypto isakmp sa
+dst             src             state          conn-id slot status
+192.168.23.2    192.168.13.1    QM_IDLE              1    0 ACTIVE
+
+
+SAIGON#show crypto ipsec sa
+
+interface: FastEthernet0/0
+    Crypto map tag: VPN, local addr 192.168.13.1
+
+   protected vrf: (none)
+   local  ident (addr/mask/prot/port): (192.168.1.0/255.255.255.0/0/0)
+   remote ident (addr/mask/prot/port): (192.168.2.0/255.255.255.0/0/0)
+   current_peer 192.168.23.2 port 500
+     PERMIT, flags={origin_is_acl,}
+    #pkts encaps: 19, #pkts encrypt: 19, #pkts digest: 19
+    #pkts decaps: 19, #pkts decrypt: 19, #pkts verify: 19
+    #pkts compressed: 0, #pkts decompressed: 0
+    #pkts not compressed: 0, #pkts compr. failed: 0
+    #pkts not decompressed: 0, #pkts decompress failed: 0
+    #send errors 1, #recv errors 0
+
+     local crypto endpt.: 192.168.13.1, remote crypto endpt.: 192.168.23.2
+     path mtu 1500, ip mtu 1500
+     current outbound spi: 0xA9DBBC7F(2849750143)
+
+     inbound esp sas:
+      spi: 0x46F19BD8(1190239192)
+        transform: esp-des esp-md5-hmac ,
+        in use settings ={Tunnel, }
+        conn id: 2001, flow_id: SW:1, crypto map: VPN
+        sa timing: remaining key lifetime (k/sec): (4454778/3362)
+        IV size: 8 bytes
+        replay detection support: Y
+        Status: ACTIVE
+
+     inbound ah sas:
+
+     inbound pcp sas:
+
+     outbound esp sas:
+      spi: 0xA9DBBC7F(2849750143)
+        transform: esp-des esp-md5-hmac ,
+        in use settings ={Tunnel, }
+        conn id: 2002, flow_id: SW:2, crypto map: VPN
+        sa timing: remaining key lifetime (k/sec): (4454778/3360)
+        IV size: 8 bytes
+        replay detection support: Y
+        Status: ACTIVE
+
+     outbound ah sas:
+
+     outbound pcp sas:
+
+
+HANOI#show crypto ipsec sa
+
+interface: FastEthernet0/0
+    Crypto map tag: VPN, local addr 192.168.23.2
+
+   protected vrf: (none)
+   local  ident (addr/mask/prot/port): (192.168.2.0/255.255.255.0/0/0)
+   remote ident (addr/mask/prot/port): (192.168.1.0/255.255.255.0/0/0)
+   current_peer 192.168.13.1 port 500
+     PERMIT, flags={origin_is_acl,}
+    #pkts encaps: 19, #pkts encrypt: 19, #pkts digest: 19
+    #pkts decaps: 19, #pkts decrypt: 19, #pkts verify: 19
+    #pkts compressed: 0, #pkts decompressed: 0
+    #pkts not compressed: 0, #pkts compr. failed: 0
+    #pkts not decompressed: 0, #pkts decompress failed: 0
+    #send errors 0, #recv errors 0
+
+     local crypto endpt.: 192.168.23.2, remote crypto endpt.: 192.168.13.1
+     path mtu 1500, ip mtu 1500
+     current outbound spi: 0x46F19BD8(1190239192)
+
+     inbound esp sas:
+      spi: 0xA9DBBC7F(2849750143)
+        transform: esp-des esp-md5-hmac ,
+        in use settings ={Tunnel, }
+        conn id: 2001, flow_id: SW:1, crypto map: VPN
+        sa timing: remaining key lifetime (k/sec): (4519669/3327)
+        IV size: 8 bytes
+        replay detection support: Y
+        Status: ACTIVE
+
+     inbound ah sas:
+
+     inbound pcp sas:
+
+     outbound esp sas:
+      spi: 0x46F19BD8(1190239192)
+        transform: esp-des esp-md5-hmac ,
+        in use settings ={Tunnel, }
+        conn id: 2002, flow_id: SW:2, crypto map: VPN
+        sa timing: remaining key lifetime (k/sec): (4519669/3325)
+        IV size: 8 bytes
+        replay detection support: Y
+        Status: ACTIVE
+
+     outbound ah sas:
+
+     outbound pcp sas:
+
+Dung phan mem wireshark bat cac goi tin isakmp va esp
+
+Buoc 7: Cau hinh them tinh nang NAT tren SAIGON va HANOI
+
+Cau hinh NAT tren SAIGON VA HANOI. Dam bao SAIGON va HANOI ping 100.100.100.100 thanh cong.
+100.100.100.100 la dia chi interface loopback tren ISP-R3 va dai dien cho moi truong Internet.
+Cach kiem tra:
+- Dung SAIGON ping 192.168.2.1 source 192.168.1.1 thi du lieu duoc bao ve. Dung wireshark test.
+- Dung SAIGON ping 100.100.100.100 source 192.168.1.1 thi du lieu khong duoc bao ve. Dung wireshark test.
+
+Buoc 7.1 Tao them Interface loopback 1 tren IPS-R3
+
+ISP-R3(config)#interface loopback 100
+ISP-R3(config-if)#ip address 100.100.100.100 255.255.255.0
+
+Buoc 7.2 Cau hinh NAT tren SAIGON va HANOI
+
+SAIGON(config)#access-list 113 deny ip 192.168.1.0 0.0.0.255 192.168.2.0 0.0.0.255
+SAIGON(config)#access-list 113 permit ip 192.168.1.0 0.0.0.255 any
+SAIGON(config)#ip nat inside source list 113 interface fastEthernet 0/0 overload
+SAIGON(config)#interface fastEthernet 0/0
+SAIGON(config-if)#ip nat outside
+SAIGON(config-if)#exit
+SAIGON(config)#interface loopback 1
+SAIGON(config-if)#ip nat inside
+
+HANOI(config)#access-list 113 deny ip 192.168.2.0 0.0.0.255 192.168.1.0 0.0.0.255
+HANOI(config)#access-list 113 permit ip 192.168.2.0 0.0.0.255 any
+HANOI(config)#ip nat inside source list 113 interface fastEthernet 0/0 overload
+HANOI(config)#interface fastEthernet 0/0
+HANOI(config-if)#ip nat outside
+HANOI(config-if)#exit
+HANOI(config)#interface loopback 2
+HANOI(config-if)#ip nat inside
+
+

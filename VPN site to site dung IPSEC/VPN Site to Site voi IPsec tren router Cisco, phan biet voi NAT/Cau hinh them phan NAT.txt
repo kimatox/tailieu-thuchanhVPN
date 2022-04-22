@@ -1,0 +1,53 @@
+SAIGON(config)#access-list 113 deny ip 192.168.10.0 0.0.0.255 192.168.20.0 0.0.0.255
+SAIGON(config)#access-list 113 permit ip 192.168.10.0 0.0.0.255 any
+SAIGON(config)#ip nat inside source list 113 interface serial 1/0 overload
+
+access-list 113 deny ip 192.168.10.0 0.0.0.255 192.168.20.0 0.0.0.255
+access-list 113 permit ip 192.168.10.0 0.0.0.255 any
+ip nat inside source list 113 interface serial 3/0 overload
+
+
+SAIGON(config)#interface serial 3/0
+SAIGON(config-if)#ip nat outside
+
+interface serial 3/0
+ip nat outside
+
+
+SAIGON(config)#interface ethernet 0/0
+SAIGON(config-if)#ip nat inside
+
+interface ethernet 0/0
+ip nat inside
+
+R1(config)#interface loopback 0
+R1(config-if)#ip address 100.100.100.100 255.255.255.0
+
+interface loopback 0
+ip address 100.100.100.100 255.255.255.0
+
+HANOI(config)#access-list 113 deny ip 192.168.20.0 0.0.0.255 192.168.10.0 0.0.0.255
+HANOI(config)#access-list 113 permit ip 192.168.20.0 0.0.0.255 any
+
+
+access-list 113 deny ip 192.168.20.0 0.0.0.255 192.168.10.0 0.0.0.255
+access-list 113 permit ip 192.168.20.0 0.0.0.255 any
+
+HANOI(config)#ip nat inside source list 113 interface serial 1/0 overload
+
+ip nat inside source list 113 interface serial 3/0 overload
+
+HANOI(config)#interface serial 3/0
+HANOI(config-if)#ip nat outside
+
+
+interface serial 3/0
+ip nat outside
+
+
+HANOI(config)#interface ethernet 0/0
+HANOI(config-if)#ip nat inside
+
+interface fastethernet 0/0
+ip nat inside
+

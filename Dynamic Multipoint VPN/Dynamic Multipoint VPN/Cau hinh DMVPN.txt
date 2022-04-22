@@ -1,0 +1,259 @@
+Buoc 1. Dat IP nhu mo hinh
+
+SAIGON(config)#interface loopback 1
+SAIGON(config-if)#ip address 192.168.1.1 255.255.255.0
+
+SAIGON(config)#interface fastEthernet 0/0
+SAIGON(config-if)#ip address 192.168.11.1 255.255.255.0
+SAIGON(config-if)#no shutdown
+
+ISP(config)#interface fastEthernet 0/0
+ISP(config-if)#ip address 192.168.11.2 255.255.255.0
+ISP(config-if)#no shutdown
+
+ISP(config)#interface fastEthernet 0/1
+ISP(config-if)#ip address 192.168.12.2 255.255.255.0
+ISP(config-if)#no shutdown
+
+ISP(config)#interface fastEthernet 1/0
+ISP(config-if)#ip address 192.168.13.2 255.255.255.0
+ISP(config-if)#no shutdown
+
+DONGNAI(config)#interface fastEthernet 0/0
+DONGNAI(config-if)#ip address 192.168.12.3 255.255.255.0
+DONGNAI(config-if)#no shutdown
+
+DONGNAI(config)#interface loopback 2
+DONGNAI(config-if)#ip address 192.168.2.1 255.255.255.0
+
+VUNGTAU(config)#interface fastEthernet 0/0
+VUNGTAU(config-if)#ip address 192.168.13.4 255.255.255.0
+VUNGTAU(config-if)#no shutdown
+
+VUNGTAU(config)#interface loopback 3
+VUNGTAU(config-if)#ip address 192.168.3.1 255.255.255.0
+
+Buoc 2. Cau hinh VPN tren SAIGON
+
+Buoc 2.1 Cau hinh chinh sach ISAKMP
+
+SAIGON(config)#crypto isakmp policy 10
+SAIGON(config-isakmp)#hash md5
+SAIGON(config-isakmp)#encryption des
+SAIGON(config-isakmp)#group 2
+SAIGON(config-isakmp)#authentication pre-share
+
+Buoc 2.2 Xac dinh thong tin key va peer
+
+SAIGON(config)#crypto isakmp key 0 ngocdai address 0.0.0.0 0.0.0.0
+
+Buoc 2.3 Cau hinh chinh sach IPSec
+
+SAIGON(config)#crypto ipsec transform-set VPN esp-md5-hmac esp-des
+SAIGON(cfg-crypto-trans)#mode transport
+
+Buoc 2.4 Cau hinh IPsec Profile (thay the cho Crypto map)
+
+SAIGON(config)#crypto ipsec profile MYVPN
+SAIGON(ipsec-profile)#set transform-set VPN
+
+Buoc 2.5 
+	
+- Tao cong Tunnel:
+	 
+SAIGON(config)#interface tunnel 1
+SAIGON(config-if)#ip address 10.1.1.1 255.255.255.0
+
+- Xac dinh dia chi nguon cho Tunnel:
+
+SAIGON(config-if)#tunnel source fastEthernet 0/0
+
+- Xac dinh mode GRE duoc su dung:
+
+SAIGON(config-if)#tunnel mode gre multipoint
+
+- Gan IPsec Profile vao cong Tunnel:
+
+SAIGON(config-if)#tunnel protection ipsec profile MYVPN:
+
+- Kich hoat NHRP (gia tri network-id co y nghia cuc bo)
+
+SAIGON(config-if)#ip nhrp network-id 1
+
+- Trong truong hop dung dinh tuyen dong thi can cau hinh de cho phep multicast duoc gui:
+
+SAIGON(config-if)#ip nhrp map multicast dynamic
+
+- Xac thuc:
+
+SAIGON(config-if)#tunnel key 123
+
+Buoc 2.6 Cau hinh dinh tuyen dong OSPF
+
+SAIGON(config)#router ospf 1
+SAIGON(config-router)#network 192.168.1.0 0.0.0.255 area 0
+SAIGON(config-router)#network 10.1.1.0 0.0.0.255 area 0
+
+SAIGON(config)#interface tunnel 1
+SAIGON(config-if)#ip ospf network broadcast
+
+Chu y: Khong cho chep interface fastEthernet 0/0 tham gia dinh tuyen
+
+Buoc 2.7 Cau hinh default route
+
+SAIGON(config)#ip route 0.0.0.0 0.0.0.0 192.168.11.2
+
+Buoc 3. Cau hinh VPN tren DONGNAI
+
+DONGNAI(config)#crypto isakmp policy 10
+DONGNAI(config-isakmp)#hash md5
+DONGNAI(config-isakmp)#encryption des
+DONGNAI(config-isakmp)#group 2
+DONGNAI(config-isakmp)#authentication pre-share
+
+DONGNAI(config)#crypto isakmp key 0 ngocdai address 0.0.0.0 0.0.0.0
+DONGNAI(config)#crypto ipsec transform-set VPN esp-md5-hmac esp-des
+DONGNAI(cfg-crypto-trans)#mode transport
+
+DONGNAI(config)#crypto ipsec profile MYVPN
+DONGNAI(ipsec-profile)#set transform-set VPN
+
+DONGNAI(config)#interface tunnel 1
+DONGNAI(config-if)#ip address 10.1.1.2 255.255.255.0
+DONGNAI(config-if)#tunnel source fastEthernet 0/0
+DONGNAI(config-if)#tunnel mode gre multipoint
+DONGNAI(config-if)#tunnel protection ipsec profile MYVPN
+DONGNAI(config-if)#ip nhrp network-id 1
+
+- Xac dinh NHRP Server:
+
+DONGNAI(config-if)#ip nhrp nhs 10.1.1.1
+
+- Cau hinh anh xa tinh cho NHRP:
+
+DONGNAI(config-if)#ip nhrp map 10.1.1.1 192.168.11.1
+
+- Cho phep multicast duoc gui den 192.168.11.1:
+
+DONGNAI(config-if)#ip nhrp map multicast 192.168.11.1
+
+DONGNAI(config-if)#tunnel key 123
+
+DONGNAI(config)#router ospf 1
+DONGNAI(config-router)#network 192.168.2.0 0.0.0.255 area 0
+DONGNAI(config-router)#network 10.1.1.0 0.0.0.255 area 0
+
+DONGNAI(config)#interface tunnel 1
+DONGNAI(config-if)#ip ospf network broadcast
+DONGNAI(config-if)#ip ospf priority 0
+
+DONGNAI(config)#ip route 0.0.0.0 0.0.0.0 192.168.12.2
+
+Chu y: Khong cho chep interface fastEthernet 0/0 tham gia dinh tuyen
+
+Buoc 4. Cau hinh VPN tren VUNGTAU
+	Cau hinh tuong tu nhu DONGNAI
+
+VUNGTAU(config)#crypto isakmp policy 10
+VUNGTAU(config-isakmp)#hash md5
+VUNGTAU(config-isakmp)#encryption des
+VUNGTAU(config-isakmp)#group 2
+VUNGTAU(config-isakmp)#authentication pre-share
+
+VUNGTAU(config)#crypto isakmp key 0 ngocdai address 0.0.0.0 0.0.0.0
+VUNGTAU(config)#crypto ipsec transform-set VPN esp-md5-hmac esp-des
+VUNGTAU(cfg-crypto-trans)#mode transport
+
+VUNGTAU(config)#crypto ipsec profile MYVPN
+VUNGTAU(ipsec-profile)#set transform-set VPN
+
+VUNGTAU(config)#interface tunnel 1
+VUNGTAU(config-if)#ip address 10.1.1.3 255.255.255.0
+VUNGTAU(config-if)#tunnel source fastEthernet 0/0
+VUNGTAU(config-if)#tunnel mode gre multipoint
+VUNGTAU(config-if)#tunnel protection ipsec profile MYVPN
+VUNGTAU(config-if)#ip nhrp network-id 1
+VUNGTAU(config-if)#ip nhrp nhs 10.1.1.1
+VUNGTAU(config-if)#ip nhrp map 10.1.1.1 192.168.11.1
+VUNGTAU(config-if)#ip nhrp map multicast 192.168.11.1
+VUNGTAU(config-if)#tunnel key 123
+
+VUNGTAU(config)#router ospf 1
+VUNGTAU(config-router)#network 192.168.3.0 0.0.0.255 area 0
+VUNGTAU(config-router)#network 10.1.1.0 0.0.0.255 area 0
+
+VUNGTAU(config)#interface tunnel 1
+VUNGTAU(config-if)#ip ospf network broadcast
+VUNGTAU(config-if)#ip ospf priority 0
+
+VUNGTAU(config)#ip route 0.0.0.0 0.0.0.0 192.168.13.2
+
+Buoc 5: Kiem tra
+
+SAIGON#ping 192.168.2.1 source 192.168.1.1
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 192.168.2.1, timeout is 2 seconds:
+Packet sent with a source address of 192.168.1.1
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 20/21/28 ms
+
+SAIGON#ping 192.168.3.1 source 192.168.1.1
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 192.168.3.1, timeout is 2 seconds:
+Packet sent with a source address of 192.168.1.1
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 16/20/24 ms
+
+DONGNAI#ping 192.168.1.1 source 192.168.2.1
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 192.168.1.1, timeout is 2 seconds:
+Packet sent with a source address of 192.168.2.1
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 16/27/32 ms
+
+DONGNAI#ping 192.168.3.1 source 192.168.2.1
+
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 192.168.3.1, timeout is 2 seconds:
+Packet sent with a source address of 192.168.2.1
+!!!!!
+Success rate is 80 percent (4/5), round-trip min/avg/max = 44/58/72 ms
+
+VUNGTAU#ping 192.168.1.1 source 192.168.3.1
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 192.168.1.1, timeout is 2 seconds:
+Packet sent with a source address of 192.168.3.1
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 16/28/40 ms
+
+VUNGTAU#ping 192.168.2.1 source 192.168.3.1
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 192.168.2.1, timeout is 2 seconds:
+Packet sent with a source address of 192.168.3.1
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 16/22/32 ms
+
+DONGNAI#show crypto isakmp sa
+IPv4 Crypto ISAKMP SA
+dst             src             state          conn-id slot status
+192.168.13.4    192.168.12.3    QM_IDLE           1003    0 ACTIVE
+192.168.12.3    192.168.13.4    QM_IDLE           1002    0 ACTIVE
+192.168.11.1    192.168.12.3    QM_IDLE           1001    0 ACTIVE
+
+VUNGTAU#show crypto isakmp sa
+IPv4 Crypto ISAKMP SA
+dst             src             state          conn-id slot status
+192.168.13.4    192.168.12.3    QM_IDLE           1002    0 ACTIVE
+192.168.12.3    192.168.13.4    QM_IDLE           1003    0 ACTIVE
+192.168.11.1    192.168.13.4    QM_IDLE           1001    0 ACTIVE
+
+SAIGON#show crypto isakmp sa
+IPv4 Crypto ISAKMP SA
+dst             src             state          conn-id slot status
+192.168.11.1    192.168.13.4    QM_IDLE           1002    0 ACTIVE
+192.168.11.1    192.168.12.3    QM_IDLE           1001    0 ACTIVE
+
+
+
+
+

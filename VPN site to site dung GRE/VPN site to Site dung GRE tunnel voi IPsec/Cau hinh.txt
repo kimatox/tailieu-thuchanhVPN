@@ -1,0 +1,151 @@
+Buoc 1. Dat IP cho nguyen mo hinh
+
+HANOI(config)#interface fastEthernet 1/0
+HANOI(config-if)#ip address 192.168.1.1 255.255.255.0
+HANOI(config-if)#no shutdown
+
+HANOI(config)#interface fastEthernet 0/0
+HANOI(config-if)#ip address 1.1.1.1 255.255.255.0
+HANOI(config-if)#no shutdown
+
+ISP(config)#interface fastEthernet 0/0
+ISP(config-if)#ip address 1.1.1.2 255.255.255.0
+ISP(config-if)#no shutdown
+
+ISP(config)#interface fastEthernet 1/0
+ISP(config-if)#ip address 2.2.2.2 255.255.255.0
+ISP(config-if)#no shutdown
+
+SAIGON(config)#interface fastEthernet 0/0
+SAIGON(config-if)#ip address 2.2.2.3 255.255.255.0
+SAIGON(config-if)#no shutdown
+
+SAIGON(config)#interface fastEthernet 1/0
+SAIGON(config-if)#ip address 192.168.2.1 255.255.255.0
+SAIGON(config-if)#no shutdown
+
+Buoc 2. Tao tunnel GRE
+
+HANOI(config)#interface tunnel 1
+HANOI(config-if)#ip address 10.10.10.10 255.255.255.0
+HANOI(config-if)#no shutdown
+HANOI(config-if)#tunnel source fastEthernet 0/0
+HANOI(config-if)#tunnel destination 2.2.2.3
+
+SAIGON(config)#interface tunnel 1
+SAIGON(config-if)#ip address 10.10.10.20 255.255.255.0
+SAIGON(config-if)#no shutdown
+SAIGON(config-if)#tunnel source fastEthernet 0/0
+SAIGON(config-if)#tunnel destination 1.1.1.1
+
+Buoc 3. Cau hinh default ve ISP
+
+HANOI(config)#ip route 0.0.0.0 0.0.0.0 1.1.1.2
+SAIGON(config)#ip route 0.0.0.0 0.0.0.0 2.2.2.2
+
+Buoc 4. Cau hinh dinh tuyen OSPF
+
+HANOI(config)#router ospf 1
+HANOI(config-router)#network 192.168.1.0 0.0.0.255 area 0
+HANOI(config-router)#network 10.10.10.0 0.0.0.255 area 0
+
+SAIGON(config)#router ospf 1
+SAIGON(config-router)#network 192.168.2.0 0.0.0.255 area 0
+SAIGON(config-router)#network 10.10.10.0 0.0.0.255 area 0
+
+Buoc 5. Dat IP cho XP1 va XP2
+
+Buoc 6. ping tu XP1 sang XP 2, dung wireshark de kiem tra ket qua cau hinh
+
+- XP1 ping thanh cong sang XP2
+- Wireshark bat duoc cac goi tin ICMP, chung minh GRE chi tao tunnel chu khong ma hoa du lieu
+- Kiem tra goi icmp tren wireshark, nhan xet cau truc goi tin, CHU Y CO IP HEADER MOI DUOC DONG THEM VAO GOI TIN.
+                                                               KIEM TRA SOURCE DESTINATION CUA IP HEADER MOI NAY.
+
+- Kiem tra bang lenh show:
+HANOI#show interfaces tunnel 1
+Tunnel1 is up, line protocol is up
+  Hardware is Tunnel
+  Internet address is 10.10.10.10/24
+  MTU 1514 bytes, BW 9 Kbit, DLY 500000 usec,
+     reliability 255/255, txload 1/255, rxload 1/255
+  Encapsulation TUNNEL, loopback not set
+  Keepalive not set
+  Tunnel source 1.1.1.1 (FastEthernet0/0), destination 2.2.2.3
+  Tunnel protocol/transport GRE/IP
+    Key disabled, sequencing disabled
+    Checksumming of packets disabled
+  Tunnel TTL 255
+  Fast tunneling enabled
+  Tunnel transmit bandwidth 8000 (kbps)
+  Tunnel receive bandwidth 8000 (kbps)
+  Last input 00:00:01, output 00:00:06, output hang never
+  Last clearing of "show interface" counters never
+  Input queue: 0/75/0/0 (size/max/drops/flushes); Total output drops: 0
+  Queueing strategy: fifo
+  Output queue: 0/0 (size/max)
+  5 minute input rate 0 bits/sec, 0 packets/sec
+  5 minute output rate 0 bits/sec, 0 packets/sec
+     66 packets input, 6684 bytes, 0 no buffer
+     Received 0 broadcasts, 0 runts, 0 giants, 0 throttles
+     0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored, 0 abort
+     61 packets output, 6152 bytes, 0 underruns
+     0 output errors, 0 collisions, 0 interface resets
+     0 output buffer failures, 0 output buffers swapped out
+
+Buoc 7. Cau hinh them IPsec de bao ve cho GRE tunnel
+
+HANOI(config)#crypto isakmp policy 10
+HANOI(config-isakmp)#hash md5
+HANOI(config-isakmp)#authentication pre-share
+HANOI(config-isakmp)#group 2
+HANOI(config-isakmp)#encryption des
+HANOI(config-isakmp)#exit
+
+HANOI(config)#crypto isakmp key 0 ngocdai address 2.2.2.3
+
+HANOI(config)#crypto ipsec transform-set MYVPN esp-des esp-md5-hmac
+HANOI(cfg-crypto-trans)#mode tunnel
+HANOI(cfg-crypto-trans)#exit
+
+HANOI(config)#crypto map MYVPN 10 ipsec-isakmp
+HANOI(config-crypto-map)#set peer 2.2.2.3
+HANOI(config-crypto-map)#set transform-set MYVPN
+HANOI(config-crypto-map)#match address 100
+HANOI(config-crypto-map)#exit
+
+HANOI(config)#interface fastEthernet 0/0
+HANOI(config-if)#crypto map MYVPN
+HANOI(config-if)#
+*Mar  1 00:12:41.799: %CRYPTO-6-ISAKMP_ON_OFF: ISAKMP is ON
+HANOI(config-if)#exit
+
+HANOI(config)#access-list 100 permit gre 192.168.1.0 0.0.0.255 192.168.2.0 0.0.0.255
+
+
+SAIGON(config)#crypto isakmp policy 10
+SAIGON(config-isakmp)#hash md5
+SAIGON(config-isakmp)#authentication pre-share
+SAIGON(config-isakmp)#group 2
+SAIGON(config-isakmp)#encryption des
+SAIGON(config-isakmp)#exit
+
+HANOI(config)#crypto isakmp key 0 ngocdai address 1.1.1.1
+
+SAIGON(config)#crypto ipsec transform-set MYVPN esp-des esp-md5-hmac
+SAIGON(cfg-crypto-trans)#mode tunnel
+SAIGON(cfg-crypto-trans)#exit
+
+SAIGON(config)#crypto map MYVPN 10 ipsec-isakmp
+SAIGON(config-crypto-map)#set peer 1.1.1.1
+SAIGON(config-crypto-map)#set transform-set MYVPN
+SAIGON(config-crypto-map)#match address 100
+SAIGON(config-crypto-map)#exit
+
+SAIGON(config)#interface fastEthernet 0/0
+SAIGON(config-if)#crypto map MYVPN
+SAIGON(config-if)#
+*Mar  1 00:19:37.087: %CRYPTO-6-ISAKMP_ON_OFF: ISAKMP is ON
+SAIGON(config-if)#exit
+
+SAIGON(config)#access-list 100 permit gre 192.168.2.0 0.0.0.255 192.168.1.0 0.0.0.255

@@ -1,0 +1,491 @@
+Buoc 1: Dat IP
+
+Buoc 2: Cau hinh VPN tren SAIGON
+
+Buoc 2.1 Cau hinh chinh sach IKE (chinh sach pha 1)
+
+SAIGON(config)#crypto isakmp policy 10
+SAIGON(config-isakmp)#hash md5
+SAIGON(config-isakmp)#encryption des
+SAIGON(config-isakmp)#group 2
+SAIGON(config-isakmp)#authentication pre-share
+
+Buoc 2.2 Xac dinh thong tin key va peer
+
+SAIGON(config)#crypto isakmp key 0 ngocdai address 192.168.3.10
+
+Buoc 2.3 Cau hinh chinh sach IPSec
+
+SAIGON(config)#crypto ipsec transform-set MYVPN esp-md5-hmac esp-des
+
+Buoc 2.4 Xac dinh luong du lieu duoc ma hoa (luong du lieu duoc bao ve)
+
+SAIGON(config)#access-list 100 permit ip 192.168.10.0 0.0.0.255 192.168.20.0 0.0.0.255
+
+SAIGON(config)#access-list 100 permit ip 192.168.10.0 0.0.0.255 192.168.20.0 0.0.0.255 eq 80
+
+Buoc 2.5 Cau hinh Crypto map
+
+SAIGON(config)#crypto map MYVPN 10 ipsec-isakmp
+% NOTE: This new crypto map will remain disabled until a peer
+        and a valid access list have been configured.
+SAIGON(config-crypto-map)#set peer 192.168.3.10
+SAIGON(config-crypto-map)#set transform-set MYVPN
+SAIGON(config-crypto-map)#match address 100
+ 
+Buoc 2.6 Cau hinh Crypto map len cong
+
+SAIGON(config)#interface serial 1/0
+SAIGON(config-if)#crypto map MYVPN
+
+Buoc 2.7 Cau hinh default ve nha cung cap dich vu
+
+SAIGON(config)#ip route 0.0.0.0 0.0.0.0 192.168.1.1
+
+Buoc 3: Cau hinh VPN tren HANOI
+
+Buoc 3.1 Cau hinh chinh sach IKE (chinh sach pha 1)
+
+HANOI(config)#crypto isakmp policy 10
+HANOI(config-isakmp)#hash md5
+HANOI(config-isakmp)#encryption des
+HANOI(config-isakmp)#group 2
+HANOI(config-isakmp)#authentication pre-share
+
+Buoc 3.2 Xac dinh thong tin key va peer
+
+HANOI(config)#crypto isakmp key 0 ngocdai address 192.168.1.10
+
+Buoc 3.3 Cau hinh chinh sach IPSec
+
+HANOI(config)#crypto ipsec transform-set MYVPN esp-md5-hmac esp-des
+
+Buoc 3.4 Xac dinh luong du lieu duoc ma hoa (luong du lieu duoc bao ve)
+
+HANOI(config)#access-list 100 permit ip 192.168.20.0 0.0.0.255 192.168.10.0 0.0.0.255
+                                     
+Buoc 3.5 Cau hinh Crypto map
+
+HANOI(config)#crypto map MYVPN 10 ipsec-isakmp
+% NOTE: This new crypto map will remain disabled until a peer
+        and a valid access list have been configured.
+HANOI(config-crypto-map)#set peer 192.168.1.10
+HANOI(config-crypto-map)#set transform-set MYVPN
+HANOI(config-crypto-map)#match address 100
+
+Buoc 3.6 Cau hinh Crypto map len cong
+
+HANOI(config)#interface serial 1/0
+HANOI(config-if)#crypto map MYVPN
+*Feb 17 13:14:32.666: %CRYPTO-6-ISAKMP_ON_OFF: ISAKMP is ON
+
+Buoc 3.7 Cau hinh default ve nha cung cap dich vu
+
+HANOI(config)#ip route 0.0.0.0 0.0.0.0 192.168.3.1
+
+Buoc 4. Cac lenh kiem tra trang thai
+
+Trang thai isakmp sa:
+
+SAIGON#show crypto isakmp sa
+IPv4 Crypto ISAKMP SA
+dst             src             state          conn-id status
+192.168.3.10    192.168.1.10    QM_IDLE           1001 ACTIVE
+
+IPv6 Crypto ISAKMP SA
+
+Trang thai ipsec:
+
+SAIGON#show crypto ipsec sa
+
+
+SAIGON#show running-config
+Building configuration...
+
+Current configuration : 1590 bytes
+!
+version 15.2
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+!
+hostname SAIGON
+!
+boot-start-marker
+boot-end-marker
+!
+!
+!
+no aaa new-model
+!
+mmi polling-interval 60
+no mmi auto-configure
+no mmi pvc
+mmi snmp-timeout 180
+ip auth-proxy max-login-attempts 5
+ip admission max-login-attempts 5
+!
+!
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+multilink bundle-name authenticated
+!
+!
+!
+!
+!
+!
+!
+!
+!
+redundancy
+!
+!
+!
+!
+!
+!
+!
+crypto isakmp policy 10
+ hash md5
+ authentication pre-share
+ group 2
+crypto isakmp key ngocdai address 192.168.3.10
+!
+!
+crypto ipsec transform-set MYVPN esp-des esp-md5-hmac
+!
+!
+!
+crypto map MYVPN 10 ipsec-isakmp
+ set peer 192.168.3.10
+ set transform-set MYVPN
+ match address 100
+!
+!
+!
+!
+!
+interface Ethernet0/0
+ ip address 192.168.10.10 255.255.255.0
+!
+interface Ethernet0/1
+ no ip address
+ shutdown
+!
+interface Ethernet0/2
+ no ip address
+ shutdown
+!
+interface Ethernet0/3
+ no ip address
+ shutdown
+!
+interface Serial1/0
+ ip address 192.168.1.10 255.255.255.0
+ serial restart-delay 0
+ crypto map MYVPN
+!
+interface Serial1/1
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial1/2
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial1/3
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+ip forward-protocol nd
+!
+!
+no ip http server
+no ip http secure-server
+ip route 0.0.0.0 0.0.0.0 192.168.1.1
+!
+access-list 100 permit ip 192.168.10.0 0.0.0.255 192.168.20.0 0.0.0.255
+!
+!
+!
+control-plane
+!
+!
+!
+!
+!
+!
+!
+line con 0
+ logging synchronous
+line aux 0
+line vty 0 4
+ login
+ transport input all
+!
+!
+end
+
+
+R1#show running-config
+Building configuration...
+
+Current configuration : 1174 bytes
+!
+version 15.2
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+!
+hostname R1
+!
+boot-start-marker
+boot-end-marker
+!
+!
+!
+no aaa new-model
+!
+mmi polling-interval 60
+no mmi auto-configure
+no mmi pvc
+mmi snmp-timeout 180
+ip auth-proxy max-login-attempts 5
+ip admission max-login-attempts 5
+!
+!
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+multilink bundle-name authenticated
+!
+!
+!
+!
+!
+!
+!
+!
+!
+redundancy
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+interface Ethernet0/0
+ no ip address
+ shutdown
+!
+interface Ethernet0/1
+ no ip address
+ shutdown
+!
+interface Ethernet0/2
+ no ip address
+ shutdown
+!
+interface Ethernet0/3
+ no ip address
+ shutdown
+!
+interface Serial1/0
+ ip address 192.168.1.1 255.255.255.0
+ serial restart-delay 0
+!
+interface Serial1/1
+ ip address 192.168.3.1 255.255.255.0
+ serial restart-delay 0
+!
+interface Serial1/2
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial1/3
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+ip forward-protocol nd
+!
+!
+no ip http server
+no ip http secure-server
+!
+!
+!
+!
+control-plane
+!
+!
+!
+!
+!
+!
+!
+line con 0
+ logging synchronous
+line aux 0
+line vty 0 4
+ login
+ transport input all
+!
+!
+end
+
+HANOI#show running-config
+Building configuration...
+
+Current configuration : 1589 bytes
+!
+version 15.2
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+!
+hostname HANOI
+!
+boot-start-marker
+boot-end-marker
+!
+!
+!
+no aaa new-model
+!
+mmi polling-interval 60
+no mmi auto-configure
+no mmi pvc
+mmi snmp-timeout 180
+ip auth-proxy max-login-attempts 5
+ip admission max-login-attempts 5
+!
+!
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+multilink bundle-name authenticated
+!
+!
+!
+!
+!
+!
+!
+!
+!
+redundancy
+!
+!
+!
+!
+!
+!
+!
+crypto isakmp policy 10
+ hash md5
+ authentication pre-share
+ group 2
+crypto isakmp key ngocdai address 192.168.1.10
+!
+!
+crypto ipsec transform-set MYVPN esp-des esp-md5-hmac
+!
+!
+!
+crypto map MYVPN 10 ipsec-isakmp
+ set peer 192.168.1.10
+ set transform-set MYVPN
+ match address 100
+!
+!
+!
+!
+!
+interface Ethernet0/0
+ ip address 192.168.20.10 255.255.255.0
+!
+interface Ethernet0/1
+ no ip address
+ shutdown
+!
+interface Ethernet0/2
+ no ip address
+ shutdown
+!
+interface Ethernet0/3
+ no ip address
+ shutdown
+!
+interface Serial1/0
+ ip address 192.168.3.10 255.255.255.0
+ serial restart-delay 0
+ crypto map MYVPN
+!
+interface Serial1/1
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial1/2
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial1/3
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+ip forward-protocol nd
+!
+!
+no ip http server
+no ip http secure-server
+ip route 0.0.0.0 0.0.0.0 192.168.3.1
+!
+access-list 100 permit ip 192.168.20.0 0.0.0.255 192.168.10.0 0.0.0.255
+!
+!
+!
+control-plane
+!
+!
+!
+!
+!
+!
+!
+line con 0
+ logging synchronous
+line aux 0
+line vty 0 4
+ login
+ transport input all
+!
+!
+end
+

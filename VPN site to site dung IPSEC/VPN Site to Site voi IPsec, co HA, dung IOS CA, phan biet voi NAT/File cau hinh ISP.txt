@@ -1,0 +1,146 @@
+ISP#show running-config
+Building configuration...
+
+Current configuration : 2685 bytes
+!
+! Last configuration change at 00:38:21 UTC Fri Mar 1 2002
+! NVRAM config last updated at 01:25:46 UTC Fri Mar 1 2002
+!
+version 12.4
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+!
+hostname ISP
+!
+boot-start-marker
+boot-end-marker
+!
+!
+no aaa new-model
+memory-size iomem 5
+ip cef
+!
+!
+!
+!
+ip domain name abc.com
+!
+multilink bundle-name authenticated
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+crypto pki server IOSCA
+ issuer-name cn=IOS_CA,ou=Security,o=ngocdai
+ grant auto
+!
+crypto pki trustpoint IOSCA
+ revocation-check crl
+ rsakeypair IOSCA
+!
+!
+crypto pki certificate chain IOSCA
+ certificate ca 01
+  30820245 308201AE A0030201 02020101 300D0609 2A864886 F70D0101 04050030
+  36311030 0E060355 040A1307 6E676F63 64616931 11300F06 0355040B 13085365
+  63757269 7479310F 300D0603 5504030C 06494F53 5F434130 1E170D30 32303330
+  31303033 3830335A 170D3035 30323238 30303338 30335A30 36311030 0E060355
+  040A1307 6E676F63 64616931 11300F06 0355040B 13085365 63757269 7479310F
+  300D0603 5504030C 06494F53 5F434130 819F300D 06092A86 4886F70D 01010105
+  0003818D 00308189 02818100 8EF8038D 24B5DB10 C54951DB CD1B5049 9C0008C3
+  603ECF69 1FB92A58 240335CD B1CB9379 3C95D679 A9B86CC7 6FBBE149 736EBBA5
+  26BCB071 6ADC27D7 795864C3 F439DDC7 7D61F2CD 896868AC BC11BF94 383F0326
+  8F9F9ECF 8834CA38 F8DC458B 5EE65E4A A7C87C53 DFCF7B41 2D61E753 4F1286E9
+  FBA568BC A9E1C90E B6B1243F 02030100 01A36330 61300F06 03551D13 0101FF04
+  05300301 01FF300E 0603551D 0F0101FF 04040302 0186301F 0603551D 23041830
+  1680148B 2D6D78C0 27A3760F 22BF1D36 AA6DB844 02630430 1D060355 1D0E0416
+  04148B2D 6D78C027 A3760F22 BF1D36AA 6DB84402 6304300D 06092A86 4886F70D
+  01010405 00038181 00876D9E 4BFCF96A C0ABB794 A446622C 673EF760 F535C160
+  25CF2BE8 E43C1C23 91EC1E76 53DF580C 54E05C6F 7D4DFED7 CAF98E0F 4DEA78B9
+  B49D7D7E 1D8BB4C3 67B69015 9D9F40C4 84C9D6A0 32CEE900 D37215AD 73043732
+  B8C02F81 5F3200DD F498528D 2B6C9791 DCA980E5 1A7E4046 11117179 CB9C0029
+  8AE45282 08535229 3E
+        quit
+!
+!
+archive
+ log config
+  hidekeys
+!
+!
+!
+!
+!
+!
+!
+!
+interface Loopback100
+ ip address 100.100.100.100 255.255.255.0
+!
+interface FastEthernet0/0
+ ip address 192.168.14.4 255.255.255.0
+ duplex auto
+ speed auto
+!
+interface FastEthernet0/1
+ ip address 192.168.13.4 255.255.255.0
+ duplex auto
+ speed auto
+!
+interface FastEthernet1/0
+ ip address 192.168.15.4 255.255.255.0
+ duplex auto
+ speed auto
+!
+interface FastEthernet2/0
+ no ip address
+ shutdown
+ duplex auto
+ speed auto
+!
+ip forward-protocol nd
+!
+!
+ip http server
+no ip http secure-server
+!
+!
+!
+!
+!
+!
+!
+control-plane
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+line con 0
+line aux 0
+line vty 0 4
+ login
+!
+ntp master
+!
+end

@@ -1,0 +1,48 @@
+Server:
+	Download :
+		http://www.oberhumer.com/opensource/lzo/download/LZO-v1/lzo-1.08.tar.gz
+		http://www.openvpn.net/release/openvpn-2.0.tar.g
+
+		Install
+		lzo:
+			tar -xvzf lzo-1.08.tar.gz
+			cd lzo-1.08
+			./configure
+			make
+			make check
+			make test
+			make install
+			
+		openvpn:
+			tar -xvzf openvpn-2.0.tar.gz
+			cd openvpn-2.0
+			./configure
+			make 
+			make install
+
+	Config:
+		 
+		cp -r openvpn-2.0 /etc/openvpn
+		cd /etc/openvpn/easy-rsa
+		. vars 
+		./clean-all
+		./build-ca
+		./build-key-server server
+		./build-key client01
+		./build-dh
+		mkdir /etc/openvpn/config
+		cp /etc/openvpn/sample-config-files/server.conf /etc/openvpn/config
+		cd /etc/openvpn/easy-rsa/keys
+		cp dh1024.pem server.key server.crt ca.crt /etc/openvpn/config
+		openvpn /etc/openvpn/config/server.conf
+
+Client:
+	Download tool VPN XP:
+		http://openvpn.net/release/openvpn-2.0.9-install.exe
+		
+	Config:
+		copy files ca.crt , client.crt , client.key from Server to C:\Program Files\OpenVPN\config 
+		Edit file C:\Program Files\OpenVPN\sample-config\client.opvn
+			remote IP_SERVER_VPN 1194
+		
+ 
